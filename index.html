@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GST Calculator — Premium</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0e1a;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.10);
+      --accent:    #6c63ff;
+      --accent2:   #00d4aa;
+      --text:      #e8eaf6;
+      --muted:     #8892b0;
+      --card-bg:   rgba(255,255,255,0.06);
+      --glow:      0 0 40px rgba(108,99,255,0.25);
+      --radius:    18px;
+      --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,99,255,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(0,212,170,0.12) 0%, transparent 60%);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 36px; animation: fadeDown 0.6s ease both; }
+    .header .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.35);
+      border-radius: 50px; padding: 5px 14px; font-size: 11px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase; color: #a89fff; margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: clamp(26px, 5vw, 40px); font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, #a89fff 70%, #00d4aa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header p { margin-top: 8px; color: var(--muted); font-size: 14px; }
+
+    /* Card */
+    .card {
+      width: 100%; max-width: 520px;
+      background: var(--card-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 32px;
+      box-shadow: var(--glow), 0 24px 64px rgba(0,0,0,0.4);
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    /* Mode Toggle */
+    .mode-toggle {
+      display: flex; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: 12px; padding: 4px; margin-bottom: 28px; position: relative;
+    }
+    .mode-toggle .slider {
+      position: absolute; top: 4px; left: 4px;
+      width: calc(50% - 4px); height: calc(100% - 8px);
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 9px; transition: transform var(--transition);
+      box-shadow: 0 4px 16px rgba(108,99,255,0.4);
+    }
+    .mode-toggle.total-mode .slider { transform: translateX(100%); }
+    .mode-btn {
+      flex: 1; background: none; border: none; color: var(--muted);
+      font-size: 13px; font-weight: 600; padding: 10px 8px; cursor: pointer;
+      border-radius: 9px; position: relative; z-index: 1;
+      transition: color var(--transition); letter-spacing: 0.3px;
+    }
+    .mode-btn.active { color: #fff; }
+
+    /* Labels */
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+
+    /* Rate Pills */
+    .rate-group { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .rate-pill {
+      flex: 1; min-width: 56px; background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border); border-radius: 10px; color: var(--muted);
+      font-size: 13px; font-weight: 700; padding: 10px 4px; cursor: pointer;
+      text-align: center; transition: all var(--transition); position: relative; overflow: hidden;
+    }
+    .rate-pill::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      opacity: 0; transition: opacity var(--transition);
+    }
+    .rate-pill span { position: relative; z-index: 1; }
+    .rate-pill:hover { border-color: rgba(108,99,255,0.5); color: var(--text); }
+    .rate-pill.active { border-color: var(--accent); color: #fff; box-shadow: 0 0 20px rgba(108,99,255,0.3); }
+    .rate-pill.active::before { opacity: 1; }
+
+    /* Input */
+    .input-wrap { position: relative; margin-bottom: 8px; }
+    .input-wrap .currency {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      font-size: 18px; font-weight: 700; color: var(--accent2); pointer-events: none; z-index: 1;
+    }
+    .amount-input {
+      width: 100%; background: rgba(0,0,0,0.35); border: 1.5px solid var(--border);
+      border-radius: 14px; color: var(--text); font-size: 22px; font-weight: 700;
+      padding: 18px 18px 18px 44px; outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .amount-input::placeholder { color: rgba(136,146,176,0.5); font-weight: 400; font-size: 16px; }
+    .amount-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.18); }
+    .amount-input.error { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgba(255,107,107,0.15); }
+    .error-msg { font-size: 12px; color: #ff6b6b; margin-top: 6px; padding-left: 4px; min-height: 20px; margin-bottom: 20px; }
+
+    /* Results */
+    .results {
+      display: flex; flex-direction: column; gap: 10px;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 0.4s ease, transform 0.4s ease; pointer-events: none;
+    }
+    .results.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+    .result-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 18px;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    .result-row:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); }
+    .result-row.highlight {
+      background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,212,170,0.10));
+      border-color: rgba(108,99,255,0.35);
+    }
+    .result-row .label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 500; }
+    .result-row .label .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .result-row .value { font-size: 16px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .result-row.highlight .value { color: #a89fff; font-size: 18px; }
+
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* CGST / SGST Split */
+    .split-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .split-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; text-align: center;
+      transition: background var(--transition);
+    }
+    .split-card:hover { background: rgba(255,255,255,0.07); }
+    .split-card .split-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .split-card .split-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .split-card.cgst .split-value { color: #a89fff; }
+    .split-card.sgst .split-value { color: var(--accent2); }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 24px 0 8px; color: var(--muted); font-size: 13px; }
+    .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* Footer */
+    .footer { margin-top: 28px; text-align: center; font-size: 12px; color: rgba(136,146,176,0.5); animation: fadeUp 0.6s 0.3s ease both; }
+
+    /* Animations */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
+    .updating { animation: pulse 0.35s ease; }
+
+    @media (max-width: 400px) {
+      .card { padding: 22px 18px; }
+      .rate-pill { font-size: 12px; padding: 9px 2px; }
+      .amount-input { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="badge">🇮🇳 India GST</div>
+    <h1>GST Calculator</h1>
+    <p>Real-time tax breakdown &mdash; no button needed</p>
+  </header>
+
+  <main class="card">
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle" id="modeToggle">
+      <div class="slider"></div>
+      <button class="mode-btn active" id="btnBase">Base Price Mode</button>
+      <button class="mode-btn"        id="btnTotal">Total Price Mode</button>
+    </div>
+
+    <!-- GST Rate -->
+    <p class="section-label">Select GST Rate</p>
+    <div class="rate-group">
+      <button class="rate-pill"        data-rate="5"><span>5%</span></button>
+      <button class="rate-pill active" data-rate="12"><span>12%</span></button>
+      <button class="rate-pill"        data-rate="18"><span>18%</span></button>
+      <button class="rate-pill"        data-rate="28"><span>28%</span></button>
+    </div>
+
+    <!-- Amount Input -->
+    <p class="section-label" id="inputLabel">Enter Base Price (₹)</p>
+    <div class="input-wrap">
+      <span class="currency">₹</span>
+      <input
+        type="number" id="amountInput" class="amount-input"
+        placeholder="e.g. 1000" min="0" step="any"
+        inputmode="decimal" autocomplete="off"
+      />
+    </div>
+    <p class="error-msg" id="errorMsg"></p>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🧮</div>
+      <p>Enter an amount above to see the breakdown</p>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="results">
+
+      <div class="result-row">
+        <span class="label"><span class="dot" style="background:#a89fff"></span>Base Price</span>
+        <span class="value" id="valBase">₹0.00</span>
+      </div>
+
+      <div class="result-row">
+        <span class="label">
+          <span class="dot" style="background:#00d4aa"></span>
+          GST Amount (<span id="rateLabel">12</span>%)
+        </span>
+        <span class="value" id="valGst">₹0.00</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="result-row highlight">
+        <span class="label">
+          <span class="dot" style="background:linear-gradient(135deg,#6c63ff,#00d4aa)"></span>
+          Total Price
+        </span>
+        <span class="value" id="valTotal">₹0.00</span>
+      </div>
+
+      <div class="split-row">
+        <div class="split-card cgst">
+          <div class="split-label">CGST (<span id="cgstRateLabel">6</span>%)</div>
+          <div class="split-value" id="valCgst">₹0.00</div>
+        </div>
+        <div class="split-card sgst">
+          <div class="split-label">SGST (<span id="sgstRateLabel">6</span>%)</div>
+          <div class="split-value" id="valSgst">₹0.00</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    CGST &amp; SGST are each half of the applicable GST rate &nbsp;&middot;&nbsp; For intra-state supply
+  </footer>
+
+  <script>
+    let mode = 'base', rate = 12;
+
+    const modeToggle    = document.getElementById('modeToggle');
+    const btnBase       = document.getElementById('btnBase');
+    const btnTotal      = document.getElementById('btnTotal');
+    const ratePills     = document.querySelectorAll('.rate-pill');
+    const amountInput   = document.getElementById('amountInput');
+    const inputLabel    = document.getElementById('inputLabel');
+    const errorMsg      = document.getElementById('errorMsg');
+    const emptyState    = document.getElementById('emptyState');
+    const results       = document.getElementById('results');
+    const valBase       = document.getElementById('valBase');
+    const valGst        = document.getElementById('valGst');
+    const valTotal      = document.getElementById('valTotal');
+    const valCgst       = document.getElementById('valCgst');
+    const valSgst       = document.getElementById('valSgst');
+    const rateLabel     = document.getElementById('rateLabel');
+    const cgstRateLabel = document.getElementById('cgstRateLabel');
+    const sgstRateLabel = document.getElementById('sgstRateLabel');
+
+    const fmt = n => '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function animateValue(el, text) {
+      el.classList.remove('updating');
+      void el.offsetWidth;           // force reflow to restart animation
+      el.textContent = text;
+      el.classList.add('updating');
+    }
+
+    function calculate() {
+      const raw = amountInput.value.trim();
+      errorMsg.textContent = '';
+      amountInput.classList.remove('error');
+
+      if (raw === '') {
+        results.classList.remove('visible');
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      const amount = parseFloat(raw);
+      if (isNaN(amount))          return showError('Please enter a valid number.');
+      if (amount < 0)             return showError('Amount cannot be negative.');
+      if (amount > 1_000_000_000) return showError('Amount is too large.');
+
+      let base, gstAmt, total;
+
+      if (mode === 'base') {
+        // Forward: GST not included
+        base   = amount;
+        gstAmt = (base * rate) / 100;
+        total  = base + gstAmt;
+      } else {
+        // Reverse: GST already included
+        total  = amount;
+        base   = total / (1 + rate / 100);
+        gstAmt = total - base;
+      }
+
+      const half = gstAmt / 2;
+
+      emptyState.style.display = 'none';
+      results.classList.add('visible');
+
+      animateValue(valBase,  fmt(base));
+      animateValue(valGst,   fmt(gstAmt));
+      animateValue(valTotal, fmt(total));
+      animateValue(valCgst,  fmt(half));
+      animateValue(valSgst,  fmt(half));
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      amountInput.classList.add('error');
+      results.classList.remove('visible');
+      emptyState.style.display = 'none';
+    }
+
+    function updateRateLabels() {
+      const half = rate / 2;
+      const halfStr = Number.isInteger(half) ? String(half) : half.toFixed(1);
+      rateLabel.textContent     = rate;
+      cgstRateLabel.textContent = halfStr;
+      sgstRateLabel.textContent = halfStr;
+    }
+
+    function setMode(m) {
+      mode = m;
+      if (m === 'base') {
+        modeToggle.classList.remove('total-mode');
+        btnBase.classList.add('active');  btnTotal.classList.remove('active');
+        inputLabel.textContent  = 'Enter Base Price (₹)';
+        amountInput.placeholder = 'e.g. 1000';
+      } else {
+        modeToggle.classList.add('total-mode');
+        btnTotal.classList.add('active'); btnBase.classList.remove('active');
+        inputLabel.textContent  = 'Enter Total Price (₹)';
+        amountInput.placeholder = 'e.g. 1120';
+      }
+      calculate();
+    }
+
+    btnBase.addEventListener('click',  () => setMode('base'));
+    btnTotal.addEventListener('click', () => setMode('total'));
+
+    ratePills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        ratePills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        rate = parseInt(pill.dataset.rate, 10);
+        updateRateLabels();
+        calculate();
+      });
+    });
+
+    amountInput.addEventListener('input', calculate);
+    amountInput.addEventListener('paste', () => setTimeout(calculate, 0));
+
+    updateRateLabels();
+    amountInput.focus();
+  </script>
+</body>
+</html>
